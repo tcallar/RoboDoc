@@ -1,0 +1,142 @@
+--------
+--------RoboDoc - Tolga-Can Callar
+--------
+--------
+dhJointLinkCreate=function(d,theta,a,alpha,parentJointName,childLinkName,childJointName,righty,addChildJointShiftAlongWorldZ,jointSizeTable)
+
+if addChildJointShiftAlongWorldZ>0 then
+		linkLength=addChildJointShiftAlongWorldZ
+
+
+elseif a>0 then
+		linkLength=a
+
+
+elseif d>0 then
+		linkLength=d
+end
+
+local theta=theta*math.pi/180
+local alpha=alpha*math.pi/180
+local parentJointHandle=sim.getObjectHandle(parentJointName)
+local objMatr=sim.getObjectMatrix(parentJointHandle,-1)
+local objMatr=sim.multiplyMatrices(objMatr,sim.getJointMatrix(parentJointHandle))
+
+local m1=sim.buildMatrix({0,0,d},{0,0,theta})
+local m2=sim.buildMatrix({a,0,0},{alpha,0,0})
+local m=sim.multiplyMatrices(m1,m2)
+local objMatr=sim.multiplyMatrices(objMatr,m)
+
+local childJoint=sim.createJoint(sim.joint_revolute_subtype,sim.jointmode_passive,0,{jointSizeTable[1],jointSizeTable[2]})
+sim.setObjectMatrix(childJoint,-1,objMatr)
+sim.setObjectName(childJoint,childJointName)
+
+parentJointPosition=sim.getObjectPosition(parentJointHandle,-1)
+childJointPosition=sim.getObjectPosition(childJoint,-1)
+sim.setObjectPosition(childJoint,-1,{childJointPosition[1],childJointPosition[2],childJointPosition[3]+addChildJointShiftAlongWorldZ})
+childJointPosition=sim.getObjectPosition(childJoint,-1)
+jointDistanceVector={childJointPosition[1]-parentJointPosition[1],childJointPosition[2]-parentJointPosition[2],childJointPosition[3]-parentJointPosition[3]}
+--childLinkLength=math.sqrt(jointDistanceVector[1]*jointDistanceVector[1]+jointDistanceVector[2]*jointDistanceVector[2]+jointDistanceVector[3]*jointDistanceVector[3])
+
+childLink=sim.createPureShape(2,10000,{0.05,-1,linkLength},0,NULL)
+sim.setObjectSpecialProperty(childLink,sim.objectspecialproperty_collidable)
+
+sim.setObjectPosition(childLink,parentJointHandle,{0,0,0})
+if righty==r then
+sim.setObjectPosition(childLink,childLink,{0,0.05,linkLength/2})
+else
+sim.setObjectPosition(childLink,childLink,{0,0,linkLength/2})
+end
+sim.setObjectName(childLink,childLinkName)
+
+sim.setObjectParent(childLink,parentJointHandle,true)
+sim.setObjectParent(childJoint,childLink,true)
+
+end
+goldenRatio=0.618
+
+--anatomische kinematische struktur eines arztes (50. perzentil)
+
+linkLength1=0.50--
+linkLength2=0.40
+linkLength3=0.40--
+linkLength4=0.05
+linkLength5=0.05--
+linkLength6=0.05--
+linkLength7=0.05--
+linkLength8=0.20---------------gesamtlaenge=140
+linkLength9=0.20
+linkLength10=0.20
+--wristLinkLength=0.05
+jointSize={0.055,0.055}
+
+joint1=sim.createJoint(sim.joint_revolute_subtype,sim.jointmode_passive,0,jointSize)
+sim.setObjectName(joint1,'joint1')
+joint1Position={0.5,0,0}
+sim.setObjectPosition(joint1,-1,joint1Position)
+linkLength0=math.sqrt(joint1Position[1]*joint1Position[1]+joint1Position[2]*joint1Position[2]+joint1Position[3]*joint1Position[3])
+link0=sim.createPureShape(2,10000,{0.1,0,joint1Position[3]},0,NULL)
+
+sim.setObjectPosition(link0,-1,joint1Position)
+
+sim.setObjectSpecialProperty(link0,sim.objectspecialproperty_collidable)
+sim.setObjectName(link0,'link0')
+sim.setObjectPosition(link0,joint1,{0,0,((-1*joint1Position[3])/2)})
+sim.setObjectParent(joint1,link0,true)
+
+
+
+dhJointLinkCreate(linkLength1,0,0,90,'joint1','link1','joint2',0,0,jointSize) --rotational axis orthogonal to link's axis
+dhJointLinkCreate(-0.05,0,0,0,'joint2','link2','joint3',r,linkLength2,jointSize) --rotational axis parallel to link's axis
+dhJointLinkCreate(-0.05,0,0,-90,'joint3','link3','joint4',r,linkLength3,jointSize)
+dhJointLinkCreate(0,0,0,-90,'joint4','link4','joint5',0,linkLength4,jointSize)
+dhJointLinkCreate(0.05,0,0,90,'joint5','link5','joint6',r,linkLength5,jointSize)
+--dhJointLinkCreate(0,0,0,-90,'joint6','link6','joint7',0,linkLength6,jointSize)
+--dhJointLinkCreate(linkLength7,0,0,90,'joint7','link7','joint8',0,0,jointSize)
+--dhJointLinkCreate(-0.05,0,0,-90,'joint8','link8','joint9',r,linkLength,jointSize)
+--dhJointLinkCreate(linkLength,0,0,90,'joint9','link9','joint10',0,0,jointSize)
+--dhJointLinkCreate(-0.05,0,0,-90,'joint10','link10','joint11',r,linkLength,jointSize)
+--dhJointLinkCreate(linkLength,0,0,90,'joint11','link11','joint12',0,0,jointSize)
+
+sim.loadModel('Models/robots/non-mobile/FullPhantom.ttm')
+sim.loadModel('Models/robots/non-mobile/DexterityTester.ttm')
+sim.loadModel('Models/robots/non-mobile/workspaceGenerator.ttm')
+adapter=sim.loadModel('Models/robots/non-mobile/AdapterWithTipDummyWithoutBase.ttm')
+tip=sim.getObjectHandle('tip')
+target=sim.createDummy(0.01,NULL)
+sim.setObjectName(target,'target')
+lastJoint=sim.getObjectHandle('joint6')
+lastLink=sim.getObjectHandle('link5')
+sim.setObjectParent(target,link0,true)
+sim.setObjectParent(adapter,lastJoint,true)
+sim.setObjectOrientation(adapter,-1,{0,0,0})
+sim.setObjectOrientation(adapter,-1,{math.pi,0,0})
+sim.setObjectPosition(adapter,lastJoint,{0,0,1.25*linkLength7})
+--sim.setObjectPosition(adapter,adapter,{0.01,0,linkLength7})
+sim.setLinkDummy(tip,target)
+sim.setObjectInt32Parameter(tip,10000,sim.dummy_linktype_ik_tip_target)
+ik=sim.createIkGroup(100010,{sim.ik_pseudo_inverse_method,6},NULL)
+sim.createIkElement(ik,0,{tip,link0,-1,sim.ik_x_constraint+sim.ik_y_constraint+sim.ik_z_constraint+sim.ik_alpha_beta_constraint+sim.ik_gamma_constraint},NULL)
+environment=sim.createCollection('environment',0)
+manipulator=sim.createCollection('manipulator',0)
+sim.addObjectToCollection(environment,link0,sim_handle_all,1)
+sim.addObjectToCollection(environment,link0,sim_handle_tree,1)
+sim.addObjectToCollection(manipulator,link0,sim_handle_tree,0)
+--sim.setIkElementProperties(ik,tip,sim.ik_y_constraint,NULL,NULL)
+--sim.setIkElementProperties(ik,tip,sim.ik_z_constraint,NULL,NULL)
+--sim.setIkElementProperties(ik,tip,sim.ik_alpha_beta_constraint,NULL,NULL)
+--sim.setIkElementProperties(ik,tip,sim.ik_gamma_constraint,NULL,NULL)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
